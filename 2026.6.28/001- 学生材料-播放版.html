@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>带练1 · 做个会读心的 AI · 闯关任务卡</title>
+<style>
+  :root{
+    --bg:#0f1226; --card:#1a1f3a; --ink:#eef1ff; --dim:#aab2d5;
+    --p1:#7c5cff; --p2:#22d3ee; --good:#34d399; --warn:#fbbf24; --bad:#fb7185;
+    --a:var(--p1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 700px at 70% -10%,#2a2168 0,transparent 60%),var(--bg);
+    color:var(--ink); line-height:1.65; overflow:hidden;
+  }
+  .slide{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    padding:48px 22px 96px; text-align:center;
+    opacity:0; visibility:hidden; transform:translateY(18px);
+    transition:opacity .4s ease, transform .4s ease; pointer-events:none;
+  }
+  .slide.active{opacity:1; visibility:visible; transform:none; pointer-events:auto}
+  .inner{max-width:680px; width:100%}
+
+  .kicker{color:var(--a);font-weight:800;letter-spacing:3px;font-size:15px;margin-bottom:14px}
+  .emoji{font-size:68px;line-height:1;margin-bottom:18px;display:block}
+  h1{font-size:clamp(32px,8vw,50px);line-height:1.2;margin:6px 0 14px;
+     background:linear-gradient(90deg,var(--p1),var(--p2));
+     -webkit-background-clip:text;background-clip:text;color:transparent}
+  h2{font-size:clamp(25px,6.2vw,36px);line-height:1.3;margin:4px 0 14px}
+  .big{font-size:clamp(22px,5.6vw,30px);font-weight:800;margin:8px 0;color:var(--ink)}
+  p{color:#dfe4ff;font-size:clamp(18px,4.6vw,22px)}
+  .sub{color:var(--dim)}
+  .accentword{color:var(--a)}
+
+  /* 关卡牌 */
+  .lvtag{display:inline-block;background:var(--a);color:#0a0d1c;font-weight:900;
+    font-size:15px;letter-spacing:1px;padding:5px 14px;border-radius:20px;margin-bottom:12px}
+
+  /* 指令清单框 */
+  .box{background:#12162e;border:1px solid #2b315c;border-left:4px solid var(--a);
+    border-radius:12px;padding:16px 18px;margin-top:18px;text-align:left;
+    font-size:clamp(16px,4.2vw,19px);line-height:1.7;color:#dfe4ff}
+  .box .lbl{color:var(--a);font-weight:800;font-size:15px;letter-spacing:1px;
+    display:block;margin-bottom:8px}
+  .box ul{margin:0;padding-left:20px}
+  .box li{margin:6px 0}
+  .box b{color:var(--ink)}
+
+  /* 揭晓按钮 + 弹出 */
+  .reveal{margin-top:20px;background:linear-gradient(90deg,var(--p1),var(--p2));
+    color:#fff;border:0;padding:15px 24px;border-radius:13px;
+    font-size:clamp(17px,4.4vw,20px);font-weight:800;cursor:pointer;
+    box-shadow:0 8px 24px rgba(124,92,255,.35);animation:pulse 1.8s ease-in-out infinite}
+  .reveal:hover{opacity:.92}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  .pop{display:none;margin-top:18px}
+  .pop.show{display:block;animation:pp .4s ease}
+  @keyframes pp{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+
+  /* 提示条 */
+  .tip{margin-top:16px;font-size:clamp(15px,3.9vw,17px);color:var(--dim)}
+  .tip b{color:var(--p2)}
+
+  .motto{font-size:clamp(24px,6vw,38px);font-weight:900;margin:10px 0;
+    background:linear-gradient(90deg,var(--p2),var(--good));-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+
+  /* 砍一半序列 */
+  .chops{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;
+    align-items:center;margin-top:20px;font-size:clamp(16px,4.4vw,21px)}
+  .chop{background:#12162e;border:1px solid #2b315c;border-radius:10px;
+    padding:7px 12px;font-weight:800;color:var(--ink)}
+  .chop.last{border-color:var(--good);color:var(--good);box-shadow:0 0 0 2px rgba(52,211,153,.25)}
+  .scissor{color:var(--bad);font-weight:900}
+  .countbig{font-size:clamp(54px,16vw,90px);font-weight:900;line-height:1;
+    background:linear-gradient(90deg,var(--p1),var(--p2));-webkit-background-clip:text;
+    background-clip:text;color:transparent;margin:6px 0}
+
+  /* 控件 */
+  #bar{position:fixed;top:0;left:0;height:4px;width:0;
+    background:linear-gradient(90deg,var(--p1),var(--p2));transition:width .35s ease;z-index:30}
+  .nav{position:fixed;bottom:0;left:0;right:0;height:72px;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 18px;background:linear-gradient(0deg,rgba(15,18,38,.95),transparent)}
+  .nav button{background:#1a1f3a;border:1px solid #2b315c;color:var(--ink);
+    width:48px;height:48px;border-radius:50%;font-size:22px;cursor:pointer;
+    display:grid;place-items:center;transition:.15s}
+  .nav button:hover{border-color:var(--p1)}
+  .nav button:disabled{opacity:.3;cursor:default}
+  #cnt{color:var(--dim);font-size:14px;font-weight:700;letter-spacing:1px}
+  .hint{position:fixed;bottom:84px;left:0;right:0;text-align:center;
+    color:#6f78a6;font-size:13px;z-index:20;animation:bob 1.6s ease-in-out infinite;pointer-events:none}
+  .hint.gone{display:none}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+
+<!-- ① 封面 -->
+<section class="slide active" style="--a:var(--p2)">
+  <div class="inner">
+    <span class="emoji">🔮</span>
+    <div class="kicker">带练 1 · 今日挑战</div>
+    <h1>造一个<br>会"读心"的 AI</h1>
+    <p class="sub">用你熟的 ChatGPT + PyCharm。<br>这次你当导演，我只在旁边看。</p>
+  </div>
+</section>
+
+<!-- ② 任务：先玩个魔术（互动揭晓） -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <span class="emoji">🤫</span>
+    <div class="kicker">先别急 · 我们先玩个魔术</div>
+    <h2>在心里想一个<br><span class="accentword">1～100</span> 的数</h2>
+    <p style="margin-top:8px">想好了，<b>别说出来</b>，也别让我看到。🙈</p>
+    <button class="reveal" onclick="document.getElementById('rv').classList.add('show')">
+      想好了 → 看看会发生什么
+    </button>
+    <div class="pop" id="rv">
+      <div class="box" style="--a:var(--p2)">
+        <span class="lbl" style="color:var(--p2)">😱 接下来这个程序会……</span>
+        <b>一步步逼问</b>你心里的数——它每次猜一个，你只回答"<b>大了 / 小了</b>"，
+        没几下，它就能<b>逮到你心里那个数</b>，像真的会读心。
+      </div>
+      <p class="big" style="margin-top:16px;color:var(--p2)">今天的挑战：<br>把这个"读心术"亲手造出来。</p>
+      <p class="tip">😎 想做别的也行（文字冒险 / 问答对战……）——套路一样，挑你觉得好玩的。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ③ 这次练的本事 -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <span class="emoji">🗣️</span>
+    <div class="kicker">这节课，你只练一件事</div>
+    <h2>把"我要啥"<span class="accentword">说清楚</span></h2>
+    <p style="margin-top:10px"><b>你说得越清楚，AI 做得越准。</b></p>
+    <p style="margin-top:6px">这是高手的第一项本事——不是打字快，是<b>想清楚、讲明白</b>。</p>
+  </div>
+</section>
+
+<!-- ④ 关卡 1 -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <span class="lvtag">关卡 1 · 先想清，再开口</span>
+    <h2>把这段发给 ChatGPT</h2>
+    <div class="box">
+      <span class="lbl">🗣️ 复制这段，先生成第一版代码：</span>
+      <b>请帮我写一个 Python 终端小游戏。</b><br><br>
+      我心里想一个 1～100 的整数，电脑来猜。<br>
+      每次电脑猜一个数，我输入：大了 / 小了 / 对了。<br>
+      如果我输入“大了”，说明电脑猜大了；如果输入“小了”，说明电脑猜小了。<br>
+      猜中后，程序告诉我一共猜了几次，并问我要不要再玩一局。<br><br>
+      要求：<br>
+      1. 代码适合初学者阅读。<br>
+      2. 不要用复杂库。<br>
+      3. 先给完整代码，再用 5 句话解释代码怎么工作。<br>
+      4. 如果我的输入不是“大了 / 小了 / 对了”，要提醒我重新输入。
+    </div>
+    <p class="tip">先直接复制。跑通以后，再把它改成你自己的版本。</p>
+  </div>
+</section>
+
+<!-- ⑤ 关卡 2 -->
+<section class="slide" style="--a:var(--good)">
+  <div class="inner">
+    <span class="lvtag" style="background:var(--good)">关卡 2 · 跑起来</span>
+    <h2>把 ChatGPT 生成的代码<br>贴进 PyCharm</h2>
+    <p style="margin-top:8px">新建 <b>mind_reader.py</b>，贴代码，点绿三角 ▶️，玩一局。</p>
+    <div class="box" style="--a:var(--bad)">
+      <span class="lbl" style="color:var(--bad)">💥 崩了 / 报红字？别慌，这是好事</span>
+      别说"它坏了"——说清楚：<b>"我输入 ___ 的时候，报了 ___ 红字"</b>，再让 AI 修。<br>
+      <b>把问题讲清楚，是程序员一辈子的本事。</b>
+    </div>
+  </div>
+</section>
+
+<!-- ⑥ 关卡 3 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <span class="lvtag" style="background:var(--p2);color:#06281c">关卡 3 · 你当导演</span>
+    <h2>加一个你觉得酷的功能</h2>
+    <div class="box">
+      <span class="lbl">🎬 想一个，自己跟 AI 说（这次我不插手）：</span>
+      <ul>
+        <li>计分 / 排行榜？</li>
+        <li>难度选择（1～100 还是 1～1000）？</li>
+        <li>"再来一局"？</li>
+        <li>猜中时来个庆祝表情 🎉？</li>
+      </ul>
+    </div>
+    <p class="tip">挑 <b>一个</b> 就好——自己描述、自己迭代，走完整一圈。</p>
+  </div>
+</section>
+
+<!-- ⑦ 第一课的规矩 -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <span class="emoji">🔍</span>
+    <div class="kicker">别忘了第一课那句</div>
+    <div class="motto" style="background:linear-gradient(90deg,var(--warn),var(--bad));-webkit-background-clip:text;background-clip:text;color:transparent">能跑 ≠ 对 · 自己验</div>
+    <div class="box" style="--a:var(--warn)">
+      <span class="lbl" style="color:var(--warn)">打开它写的代码，找出这两行：</span>
+      <ul>
+        <li>哪行是电脑在<b>"猜"</b>那个数的？</li>
+        <li>哪行在<b>记次数</b>？</li>
+      </ul>
+      <b>看得懂，你才发现得了它哪天写错。</b>
+    </div>
+  </div>
+</section>
+
+<!-- ⑧ 通关 -->
+<section class="slide" style="--a:var(--good)">
+  <div class="inner">
+    <span class="emoji">🏆</span>
+    <div class="kicker">通关</div>
+    <h2>把它发出去</h2>
+    <p style="margin-top:8px">录 <b>30 秒</b> 玩游戏的屏，<br>发家庭群 / 发给一个同学。</p>
+    <p class="big" style="margin-top:14px;color:var(--good)">"这是我做的。"</p>
+  </div>
+</section>
+
+<!-- ⑨ 钩子 → 准备揭秘 -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <span class="emoji">🤔</span>
+    <h2>玩着玩着，<br>你一定会想……</h2>
+    <p class="big" style="margin-top:12px;color:var(--p2)">"它咋几次就猜中了？！"</p>
+    <p style="margin-top:14px">100 个数里随便挑一个，它<b>没几下就逮到</b>。<br>是运气好吗？还是它有诀窍？</p>
+    <p class="tip">👉 翻下一页，揭晓秘密。</p>
+  </div>
+</section>
+
+<!-- ⑩ 揭秘：砍 -->
+<section class="slide" style="--a:var(--bad)">
+  <div class="inner">
+    <div class="kicker">秘密揭晓</div>
+    <h2>它的诀窍就一个字：</h2>
+    <div class="countbig" style="background:linear-gradient(90deg,var(--bad),var(--warn));-webkit-background-clip:text;background-clip:text;color:transparent">✂️ 砍</div>
+    <p class="big" style="margin-top:10px">它从不乱猜——<br><b>每次都猜"正中间"那个数。</b></p>
+  </div>
+</section>
+
+<!-- ⑪ 演示：第一刀（互动揭晓） -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <div class="kicker">看一刀下去有多狠</div>
+    <h2>1～100，它先猜 <span class="accentword">50</span></h2>
+    <p style="margin-top:8px">不管你说"大了"还是"小了"……</p>
+    <button class="reveal" onclick="document.getElementById('cut').classList.add('show')">
+      那会怎样？👀
+    </button>
+    <div class="pop" id="cut">
+      <div class="box" style="--a:var(--p2)">
+        <span class="lbl" style="color:var(--p2)">💥 一刀，半数可能瞬间消失</span>
+        你说"<b>比 50 大</b>" → 1～49 这 <b>49 个数</b>，<b>一次全划掉</b>，只剩 51～100。<br>
+        你说"比 50 小"也一样——<b>一半的可能，一刀没了。</b>
+      </div>
+      <p class="tip">然后它在<b>剩下的一半</b>里，接着猜<b>正中间</b>……再砍一半。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ⑫ 为什么这么快 -->
+<section class="slide" style="--a:var(--good)">
+  <div class="inner">
+    <span class="emoji">⚡</span>
+    <h2>砍着砍着，<br>很快就只剩 1 个</h2>
+    <div class="chops">
+      <span class="chop">100</span><span class="scissor">✂</span>
+      <span class="chop">50</span><span class="scissor">✂</span>
+      <span class="chop">25</span><span class="scissor">✂</span>
+      <span class="chop">13</span><span class="scissor">✂</span>
+      <span class="chop">7</span><span class="scissor">✂</span>
+      <span class="chop">4</span><span class="scissor">✂</span>
+      <span class="chop">2</span><span class="scissor">✂</span>
+      <span class="chop last">1</span>
+    </div>
+    <p class="big" style="margin-top:18px">对折 <span class="accentword">7</span> 次，100 个数就只剩 1 个。</p>
+    <p class="tip">所以它<b>最多 7 次</b>，一定逮到你。换成 1～1000？也才 <b>10 次</b>。</p>
+  </div>
+</section>
+
+<!-- ⑬ 它有个名字 -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <span class="emoji">🏷️</span>
+    <div class="kicker">这个招数，程序员天天用</div>
+    <h2>它叫<span class="accentword">二分查找</span><br>(binary search)</h2>
+    <div class="box">
+      <span class="lbl">🌍 同一个"砍一半"，到处都在用：</span>
+      <ul>
+        <li>查字典：翻中间，看在前半还是后半</li>
+        <li>猜价格、猜数字游戏</li>
+        <li>程序员找 bug：<b>砍一半代码，看错还在不在</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ⑭ 金句收尾 + 下次钩子 -->
+<section class="slide" style="--a:var(--good)">
+  <div class="inner">
+    <span class="emoji">🧠</span>
+    <div class="kicker">今天真正学到的</div>
+    <div class="motto">厉害不是猜得多，<br>是每次砍掉最多的可能。</div>
+    <p style="margin-top:16px">你今天<b>造出来了</b>，还<b>看穿了</b>它的诀窍。</p>
+    <p class="tip">🎬 下次更刺激：我们让 AI <b>当场翻一次车</b>，看你能不能<b>抓到它的错</b>。</p>
+  </div>
+</section>
+
+<!-- ⑮ 小结和启示 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <span class="emoji">🧭</span>
+    <div class="kicker">小结和启示</div>
+    <h2>你不是在等 AI 变聪明，<br>你是在学会指挥它</h2>
+    <div class="box" style="--a:var(--p2)">
+      <span class="lbl">今天想传递的核心：</span>
+      <ul>
+        <li>先做出一个能跑的小东西，信心才会长出来。</li>
+        <li>你说得越清楚，AI 做得越接近你想要的样子。</li>
+        <li>做出来之后，要能讲清它怎么玩、哪里要改、下一步是什么。</li>
+      </ul>
+    </div>
+    <p class="tip">真正的本事不是复制代码，而是<b>把想法变成可运行的作品</b>。</p>
+  </div>
+</section>
+
+<div class="hint" id="hint">点击屏幕 / → 翻页</div>
+
+<div class="nav">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="cnt">1 / 14</span>
+  <button id="next" aria-label="下一页">›</button>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const bar=document.getElementById('bar');
+  const cnt=document.getElementById('cnt');
+  const prevBtn=document.getElementById('prev');
+  const nextBtn=document.getElementById('next');
+  const hint=document.getElementById('hint');
+  let i=0;
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    cnt.textContent=(i+1)+' / '+slides.length;
+    prevBtn.disabled=i===0;
+    nextBtn.disabled=i===slides.length-1;
+  }
+  function next(){ if(i<slides.length-1) show(i+1); }
+  function prev(){ if(i>0) show(i-1); }
+  nextBtn.addEventListener('click',e=>{e.stopPropagation();next();});
+  prevBtn.addEventListener('click',e=>{e.stopPropagation();prev();});
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown',' ','Enter'].includes(e.key)){e.preventDefault();next();}
+    if(['ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();prev();}
+  });
+  document.body.addEventListener('click',e=>{
+    if(e.target.closest('a,button,.nav')) return;
+    next();
+  });
+  let x0=null;
+  document.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(x0===null) return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50){ dx<0?next():prev(); }
+    x0=null;
+  },{passive:true});
+  function hideHint(){ hint.classList.add('gone'); }
+  ['click','keydown','touchend'].forEach(ev=>document.addEventListener(ev,hideHint,{once:true}));
+  show(0);
+</script>
+</body>
+</html>

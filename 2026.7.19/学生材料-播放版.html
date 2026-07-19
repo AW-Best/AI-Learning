@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git 时光机与发布 · 播放版</title>
+<style>
+  :root{--bg:#0f1226;--card:#1a1f3a;--ink:#eef1ff;--dim:#aab2d5;--p1:#7c5cff;--p2:#22d3ee;--good:#34d399;--warn:#fbbf24;--bad:#fb7185;--line:#2b315c;--a:var(--p1)}
+  *{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(900px 560px at 30% -10%,#1e2860 0,transparent 62%),var(--bg);color:var(--ink);line-height:1.65;overflow:hidden}
+  .slide{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:44px 22px 88px;opacity:0;visibility:hidden;transform:translateY(18px);transition:.35s;pointer-events:none}.slide.active{opacity:1;visibility:visible;transform:none;pointer-events:auto}.inner{max-width:760px;width:100%}
+  .kicker{color:var(--a);font-weight:800;letter-spacing:2px;font-size:15px;margin-bottom:12px}.mark{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--a);color:#09101f;font-weight:900;margin-bottom:14px}
+  h1,h2{font-size:32px;line-height:1.28;margin-bottom:14px;font-weight:900;letter-spacing:0}.big{font-size:40px}p,.box,code{font-size:18px}.tip{margin-top:14px;color:var(--dim);font-size:16px}
+  .tag{display:inline-block;background:var(--a);color:#09101f;font-weight:900;font-size:15px;letter-spacing:1px;padding:5px 14px;border-radius:20px;margin-bottom:12px}.box{background:#12162e;border:1px solid var(--line);border-left:4px solid var(--a);border-radius:8px;padding:16px 18px;margin-top:16px;text-align:left;color:#dfe4ff}.box ul{padding-left:20px}.box li{margin:6px 0}.box b{color:var(--ink)}.box .q{color:var(--ink);font-weight:700}
+  code{display:block;white-space:pre-wrap;background:#10162d;border:1px solid var(--line);border-radius:8px;padding:14px;color:#dfe4ff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.7;text-align:left}
+  .diff .del{color:var(--bad)}.diff .add{color:var(--good)}.diff .ctx{color:var(--dim)}
+  table{width:100%;border-collapse:collapse;margin-top:8px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;font-size:17px}th{font-size:15px;letter-spacing:1px}.x{color:var(--bad)}.v{color:var(--good)}
+  .divider{background:radial-gradient(900px 560px at 70% -10%,#163a32 0,transparent 60%),var(--bg)}
+  #bar{position:fixed;top:0;left:0;height:4px;background:linear-gradient(90deg,var(--p1),var(--p2));transition:.3s;z-index:20}.nav{position:fixed;bottom:0;left:0;right:0;height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:linear-gradient(0deg,rgba(15,18,38,.95),transparent);z-index:20}.nav button{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:22px}.nav button:disabled{opacity:.3}#cnt{color:var(--dim);font-size:14px;font-weight:700}
+  @media(max-width:520px){h1,h2{font-size:28px}.big{font-size:32px}p,.box,code,td,th{font-size:15px}.slide{padding-inline:16px}}
+</style>
+</head>
+<body><div id="bar"></div>
+
+<!-- ============ A 段：救火 + 审 diff + commit 规矩 ============ -->
+
+<section class="slide active" style="--a:var(--p2)"><div class="inner"><span class="mark">A</span><div class="kicker">工具 · Git 安全网</div><h1>Git 时光机</h1><p class="tip">让 AI 大改你代码之前——先学会存档、比较、退回、发布。</p></div></section>
+
+<section class="slide" style="--a:var(--warn)"><div class="inner"><span class="tag" style="--a:var(--warn)">先想一件事</span><h2>你最想救回来的是哪次?</h2><div class="box" style="--a:var(--warn)"><p class="q">上次 AI 把猜拳大师改崩、你手忙脚乱往回改的那次……</p><p style="margin-top:10px">如果有台时光机,你最想退回哪个版本?</p></div><p class="tip">先说出来,再往下翻。</p></div></section>
+
+<section class="slide" style="--a:var(--p1)"><div class="inner"><span class="tag">规矩</span><h2>commit 是写给一个月后的自己</h2><div class="box"><table><tr><th class="x">✗ 这样写,以后看不懂</th><th class="v">✓ 这样写,5 秒想起来</th></tr><tr><td class="x">update</td><td class="v">加计分板</td></tr><tr><td class="x">改了</td><td class="v">修出石头赢的统计 bug</td></tr><tr><td class="x">修</td><td class="v">切出 AI 预判模块</td></tr></table></div><p class="tip">规矩 = <b>动词 + 对象 + 目的</b>。</p></div></section>
+
+<section class="slide" style="--a:var(--bad)"><div class="inner"><span class="tag" style="--a:var(--bad)">现场</span><h2>😱 它跑不动了</h2><code>刚才还能跑……
+现在一跑就报错。
+你改了啥?  —— 不太确定。
+
+别急。想一件事:
+手里有没有一个「还能跑」的版本?</code><p class="tip">(命令先不给你。先想想,你手里有什么。)</p></div></section>
+
+<section class="slide" style="--a:var(--p2)"><div class="inner"><span class="tag" style="--a:var(--p2)">审稿</span><h2>这坨改动,你敢直接合吗?</h2><code class="diff"><span class="ctx">  def predict(history):</span>
+<span class="del">-     counts = {"石头":0, "剪刀":0, "布":0}</span>
+<span class="add">+     count  = {"石头":0, "剪刀":0, "布":0}</span>
+<span class="ctx">      for m in history:</span>
+<span class="ctx">          counts[m] += 1</span>
+<span class="del">-     guess = max(counts, key=counts.get)  # 预测他最常出的</span>
+<span class="add">+     guess = min(counts, key=counts.get)</span>
+<span class="ctx">      return guess</span></code><p class="tip">先别问对错——自己找:哪几行不对?为什么?</p></div></section>
+
+<section class="slide" style="--a:var(--bad)"><div class="inner"><h1 class="big">如果是 AI 给你改的,<br>你会直接合吗?</h1></div></section>
+
+<section class="slide" style="--a:var(--p1)"><div class="inner"><span class="tag">小抄 · 做完回看</span><h2>今天就用这几个</h2><code>git status                # 红的 = 改过还没存
+git add .                 # 全部放进待存区
+git commit -m "加计分板"   # 存档（写人话，别写 update）
+git diff                  # 看改了哪几行
+git restore game.py       # 把 game.py 退回上次存档</code><p class="tip">不用背——撞上了回来翻这页。（<code style="display:inline;padding:1px 6px;border:0">game.py</code> 换成你自己的文件名）</p></div></section>
+
+<!-- ============ B 段分隔 ============ -->
+
+<section class="slide divider" style="--a:var(--good)"><div class="inner"><div class="kicker">B 段</div><h1 class="big">发布 · 放手</h1><p class="tip">从「敢救回」升到「敢放手、发出去」。</p></div></section>
+
+<!-- ============ B 段：发布 + 重新定义 + Harness 种子 ============ -->
+
+<section class="slide" style="--a:var(--good)"><div class="inner"><span class="tag" style="--a:var(--good)">这节最重要的一句</span><h2>git = 你当 AI 老板的安全网</h2><div class="box" style="--a:var(--good)"><ul><li>让 AI 改前 —— <b>先 commit 一份能跑的</b>。</li><li>AI 改飞了 —— <b>几秒救回来</b>。</li><li>你不再怕它,因为你<b>随时能回去</b>。</li></ul></div></div></section>
+
+<section class="slide" style="--a:var(--p2)"><div class="inner"><span class="tag" style="--a:var(--p2)">认识一下</span><h2>GitHub 是什么、怎么来的</h2><div class="box" style="--a:var(--p2)"><ul><li><b>定位</b>：全世界程序员<b>存代码、给别人看、一起改</b>的地方——代码版的"作品集 + 协作网"。</li><li><b>git ≠ GitHub</b>：git 是你电脑里的时光机；GitHub 是把它搬上云端、给你<b>一个能分享的链接</b>的网站。</li><li><b>发展</b>：2008 年上线 → 今天全球<b>一亿多</b>开发者、几亿个项目，最大的代码集散地。</li><li><b>2018 年微软花 75 亿美元买下它</b>——一个"放代码的网站"值这么多，因为<b>代码是这个时代最值钱的东西之一</b>。</li></ul></div><p class="tip">别人能看、能点赞（⭐ star）、能照着学。你的猜拳大师传上去 = 第一个全世界能打开的作品。</p></div></section>
+
+<section class="slide" style="--a:var(--p1)"><div class="inner"><span class="tag">为什么这跟你有关</span><h2>大模型会写代码，是 GitHub "喂"出来的</h2><div class="box"><ul><li>ChatGPT、Claude 为什么张口就能写代码？因为训练时<b>读了海量公开代码</b>，GitHub 这类平台就是最大的来源。</li><li>你在 GitHub 上看到的每个项目，某种意义上都成了 <b>AI 的"教材"</b>。</li><li>所以你 push 上去的代码，既是你的作品，<b>也在加入"人类教 AI 写代码"的大库</b>。</li><li>GitHub 自己也做了 <b>Copilot</b>——最早帮你写代码的 AI 助手，就长在这上面。</li></ul></div><p class="tip">GitHub 不只是网盘，是<b>人类协作 + AI 学习</b>的代码中枢。你现在做的，正在这条线上。</p></div></section>
+
+<section class="slide" style="--a:var(--p2)"><div class="inner"><span class="tag" style="--a:var(--p2)">发布</span><h2>把作品发出去</h2><code>git push   →   拿到一个真链接
+
+打开 GitHub,看那一排 commit。</code><div class="box" style="--a:var(--p2)"><p class="q">这一排 commit,就是你的发布故事——<br>每个 commit 是一句你讲得清的话。</p></div></div></section>
+
+<section class="slide" style="--a:var(--p1)"><div class="inner"><span class="tag">一个新名字</span><h2>安全网之上,还有一层</h2><div class="box"><ul><li><b>① git = 安全网</b>　改飞了能救回来。</li><li><b>② 给 AI 写规矩</b>　哪能改、哪别动、改前先想啥 —— 这叫 <b>Harness</b>。</li><li><b>③ 第三季</b>　让 AI 驾驭整个项目、自动发上线。</li></ul></div><p class="tip">今天先有兜底。Harness,以后讲。</p></div></section>
+
+<section class="slide" style="--a:var(--good)"><div class="inner"><span class="tag" style="--a:var(--good)">这周做一件事</span><h2>让 AI 改之前,先 commit</h2><div class="box" style="--a:var(--good)"><ul><li>这周每次让 AI 改东西前 → <b>先 commit 一份能跑的</b>。</li><li>改飞了 → 你知道怎么办。</li><li>下次课告诉我:<b>你 commit 了吗?救回过几次?</b></li></ul></div></div></section>
+
+<!-- ============ 带回家·自己用（课后实战小抄） ============ -->
+
+<section class="slide divider" style="--a:var(--warn);background:radial-gradient(900px 560px at 70% -10%,#3a3216 0,transparent 60%),var(--bg)"><div class="inner"><div class="kicker">🧰 带回家</div><h1 class="big">今晚就用起来</h1><p class="tip">下面三页是给你自己的——照着敲,你就能管住你的猜拳大师。</p></div></section>
+
+<section class="slide" style="--a:var(--p1)"><div class="inner"><span class="tag">带回家 · 让 AI 改的完整循环</span><h2>改之前存档,改之后检查</h2><code># ① 改之前：先存一份能跑的
+git add .
+git commit -m "改之前·能跑的版本"
+
+# ② 让 AI 只改一个目标……改完
+
+# ③ 自己检查
+git diff            # 它改了哪几行？
+python game.py      # 还能跑吗？
+
+# ④ 满意就存，不满意一键退回
+git commit -am "加了出拳统计"
+git restore .       # ← 不满意时用这一句</code><p class="tip">每次只改一个目标。攒一大坨再 commit，出事就找不到是哪步坏的。</p></div></section>
+
+<section class="slide" style="--a:var(--bad)"><div class="inner"><span class="tag" style="--a:var(--bad)">带回家 · 改飞了怎么救</span><h2>先看你在哪一步,再敲对应那句</h2><code>还没 git add（最常见）
+    git restore game.py            ← 退回上次存档
+
+已经 git add 了
+    git restore --staged game.py   ← 先从待存区拿出来
+    git restore game.py            ← 再退回
+
+想退回更早的版本
+    git log --oneline              ← 找到那行前面的编号
+    git restore --source=9a3f1c game.py</code><p class="tip">不确定在哪一步？先敲 <b>git status</b>，它会告诉你。</p></div></section>
+
+<section class="slide" style="--a:var(--p2)"><div class="inner"><span class="tag" style="--a:var(--p2)">带回家 · 发布 &amp; 看懂状态</span><h2>发出去 + 红字别慌</h2><code># 发到 GitHub
+git push                # 推上去
+# 打开链接 → 复制 → 发给同学
+
+# git status 的字怎么读
+Untracked           = 新文件，git 还没管   → git add
+Changes not staged  = 改过还没存          → git add + commit
+nothing to commit   = 干净，全存好了 ✅</code></div></section>
+
+<div class="nav"><button id="prev">‹</button><div id="cnt">1 / 18</div><button id="next">›</button></div>
+<script>
+const slides=[...document.querySelectorAll('.slide')],bar=document.getElementById('bar'),cnt=document.getElementById('cnt'),prev=document.getElementById('prev'),next=document.getElementById('next');let i=0;function show(n){i=Math.max(0,Math.min(slides.length-1,n));slides.forEach((s,k)=>s.classList.toggle('active',k===i));bar.style.width=((i+1)/slides.length*100)+'%';cnt.textContent=(i+1)+' / '+slides.length;prev.disabled=i===0;next.disabled=i===slides.length-1}prev.onclick=()=>show(i-1);next.onclick=()=>show(i+1);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1)});show(0);
+</script></body></html>

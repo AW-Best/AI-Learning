@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpaceX 上市 · 1 块变 7080 块的真相 · 闯关卡</title>
+<style>
+  :root{
+    --bg:#0f1226; --card:#1a1f3a; --ink:#eef1ff; --dim:#aab2d5;
+    --p1:#7c5cff; --p2:#22d3ee; --good:#34d399; --warn:#fbbf24; --bad:#fb7185;
+    --a:var(--p1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 700px at 70% -10%,#2a2168 0,transparent 60%),var(--bg);
+    color:var(--ink); line-height:1.65; overflow:hidden;
+  }
+  .slide{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    padding:48px 22px 96px; text-align:center;
+    opacity:0; visibility:hidden; transform:translateY(18px);
+    transition:opacity .4s ease, transform .4s ease; pointer-events:none;
+  }
+  .slide.active{opacity:1; visibility:visible; transform:none; pointer-events:auto}
+  .inner{max-width:680px; width:100%}
+
+  .kicker{color:var(--a);font-weight:800;letter-spacing:3px;font-size:15px;margin-bottom:14px}
+  .emoji{font-size:68px;line-height:1;margin-bottom:18px;display:block}
+  h1{font-size:clamp(32px,8vw,50px);line-height:1.2;margin:6px 0 14px;
+     background:linear-gradient(90deg,var(--p1),var(--p2));
+     -webkit-background-clip:text;background-clip:text;color:transparent}
+  h2{font-size:clamp(25px,6.2vw,36px);line-height:1.3;margin:4px 0 14px}
+  .big{font-size:clamp(22px,5.6vw,30px);font-weight:800;margin:8px 0;color:var(--ink)}
+  p{color:#dfe4ff;font-size:clamp(18px,4.6vw,22px)}
+  .sub{color:var(--dim)}
+  .accentword{color:var(--a)}
+
+  /* 关卡牌 */
+  .lvtag{display:inline-block;background:var(--a);color:#0a0d1c;font-weight:900;
+    font-size:15px;letter-spacing:1px;padding:5px 14px;border-radius:20px;margin-bottom:12px}
+
+  /* 指令清单框 */
+  .box{background:#12162e;border:1px solid #2b315c;border-left:4px solid var(--a);
+    border-radius:12px;padding:16px 18px;margin-top:18px;text-align:left;
+    font-size:clamp(16px,4.2vw,19px);line-height:1.7;color:#dfe4ff}
+  .box .lbl{color:var(--a);font-weight:800;font-size:15px;letter-spacing:1px;
+    display:block;margin-bottom:8px}
+  .box ul{margin:0;padding-left:20px}
+  .box li{margin:6px 0}
+  .box b{color:var(--ink)}
+
+  /* 揭晓按钮 + 弹出 */
+  .reveal{margin-top:20px;background:linear-gradient(90deg,var(--p1),var(--p2));
+    color:#fff;border:0;padding:15px 24px;border-radius:13px;
+    font-size:clamp(17px,4.4vw,20px);font-weight:800;cursor:pointer;
+    box-shadow:0 8px 24px rgba(124,92,255,.35);animation:pulse 1.8s ease-in-out infinite}
+  .reveal:hover{opacity:.92}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  .pop{display:none;margin-top:18px}
+  .pop.show{display:block;animation:pp .4s ease}
+  @keyframes pp{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+
+  /* 提示条 */
+  .tip{margin-top:16px;font-size:clamp(15px,3.9vw,17px);color:var(--dim)}
+  .tip b{color:var(--p2)}
+
+  /* 视频链接小按钮 */
+  .vidlink{display:inline-flex;align-items:center;gap:6px;margin-top:18px;
+    background:#12162e;border:1px solid var(--a);color:var(--a);
+    text-decoration:none;font-weight:800;font-size:clamp(15px,3.8vw,17px);
+    padding:10px 18px;border-radius:24px;transition:.15s}
+  .vidlink:hover{background:var(--a);color:#0a0d1c}
+  .vidlink::before{content:"🎬"}
+
+  .motto{font-size:clamp(24px,6vw,38px);font-weight:900;margin:10px 0;
+    background:linear-gradient(90deg,var(--p2),var(--good));-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+
+  /* 大数字 (用于倍数) */
+  .countbig{font-size:clamp(54px,16vw,90px);font-weight:900;line-height:1;
+    background:linear-gradient(90deg,var(--p1),var(--p2));-webkit-background-clip:text;
+    background-clip:text;color:transparent;margin:6px 0}
+
+  /* 时间线 */
+  .timeline{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+    align-items:center;margin-top:18px;font-size:clamp(15px,4vw,18px)}
+  .tl{background:#12162e;border:1px solid #2b315c;border-radius:10px;
+    padding:8px 12px;font-weight:800;color:var(--ink)}
+  .tl.bad{border-color:var(--bad);color:var(--bad);box-shadow:0 0 0 2px rgba(251,113,133,.25)}
+  .tl.good{border-color:var(--good);color:var(--good);box-shadow:0 0 0 2px rgba(52,211,153,.25)}
+  .tl.gold{background:linear-gradient(90deg,#3a2c00,#1a1f3a);border-color:var(--warn);
+    color:var(--warn);box-shadow:0 0 0 2px rgba(251,191,36,.35)}
+
+  /* 代码块 */
+  pre.codeblock{background:#0a0d1c;border:1px solid #2b315c;border-left:4px solid var(--p2);
+    border-radius:10px;padding:14px 16px;margin-top:14px;text-align:left;
+    font-family:"SF Mono",Menlo,Consolas,monospace;font-size:clamp(13px,3.4vw,15px);
+    line-height:1.55;color:#dfe4ff;overflow-x:auto;white-space:pre}
+
+  /* 控件 */
+  #bar{position:fixed;top:0;left:0;height:4px;width:0;
+    background:linear-gradient(90deg,var(--p1),var(--p2));transition:width .35s ease;z-index:30}
+  .nav{position:fixed;bottom:0;left:0;right:0;height:72px;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 18px;background:linear-gradient(0deg,rgba(15,18,38,.95),transparent)}
+  .nav button{background:#1a1f3a;border:1px solid #2b315c;color:var(--ink);
+    width:48px;height:48px;border-radius:50%;font-size:22px;cursor:pointer;
+    display:grid;place-items:center;transition:.15s}
+  .nav button:hover{border-color:var(--p1)}
+  .nav button:disabled{opacity:.3;cursor:default}
+  #cnt{color:var(--dim);font-size:14px;font-weight:700;letter-spacing:1px}
+  .hint{position:fixed;bottom:84px;left:0;right:0;text-align:center;
+    color:#6f78a6;font-size:13px;z-index:20;animation:bob 1.6s ease-in-out infinite;pointer-events:none}
+  .hint.gone{display:none}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+
+<!-- ① 封面 -->
+<section class="slide active" style="--a:var(--p2)">
+  <div class="inner">
+    <span class="emoji">🚀</span>
+    <div class="kicker">课外专题 · 灵感 + 财商</div>
+    <h1>SpaceX 上市了<br>1 块变多少块？</h1>
+    <p class="sub">这节课不写代码。<br>你当一回<b>侦探</b>，挖它二十年的真相。</p>
+    <p class="tip">👉 翻页开始</p>
+  </div>
+</section>
+
+<!-- ② 开场：炸（不解读） -->
+<section class="slide" style="--a:var(--bad)">
+  <div class="inner">
+    <span class="emoji">💥</span>
+    <div class="kicker">先别问 · 先看</div>
+    <h2>看 <span class="accentword">30 秒</span><br>不说话</h2>
+    <p style="margin-top:8px">👇 爸爸会播一段 2006-2008 年的视频<br>看完 <b>别急着说感想</b>。</p>
+    <a class="vidlink" href="https://www.youtube.com/watch?v=B5UzGrIxha4" target="_blank" rel="noopener">Falcon 1 三次炸合集（4:25）</a>
+    <button class="reveal" onclick="document.getElementById('rv').classList.add('show')">
+      我看完了 →
+    </button>
+    <div class="pop" id="rv">
+      <div class="box" style="--a:var(--p2)">
+        <span class="lbl" style="color:var(--p2)">🤯 这家公司 2026 年 6 月 11 日刚上市</span>
+        <b>史上最大 IPO</b> · 估值 <b>1.77 万亿美元</b><br>
+        马斯克那一块，<b>变成了七千多块</b>。<br>
+        今天你要自己挖：<b>凭什么？</b>
+      </div>
+      <p class="big" style="margin-top:16px;color:var(--p2)">不写代码 · 当一回<b>侦探</b></p>
+    </div>
+  </div>
+</section>
+
+<!-- ③ 侦探任务 ① · 起点多小 -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <span class="lvtag">侦探任务 ① · 起点多小</span>
+    <h2>他们当年 <span class="accentword">几个人</span><br>几个人凑的？</h2>
+    <div class="box">
+      <span class="lbl">🕵️ 用 AI / 搜索自己挖这些：</span>
+      <ul>
+        <li>SpaceX <b>哪一年</b>成立？</li>
+        <li>起步时 <b>几个人</b>？办公室在<b>哪里</b>？</li>
+        <li>马斯克<b>自己</b>掏了<b>多少</b>钱？</li>
+        <li>其他投资人又投了<b>多少</b>？</li>
+      </ul>
+    </div>
+    <p class="tip">⚠️ 找到数字后，<b>问自己</b>：这个数我信吗？从哪看来的？</p>
+  </div>
+</section>
+
+<!-- ④ 侦探任务 ② · 摔多惨 -->
+<section class="slide" style="--a:var(--bad)">
+  <div class="inner">
+    <span class="lvtag" style="background:var(--bad)">侦探任务 ② · 摔多惨</span>
+    <h2>头几次发射<br><span class="accentword">炸了几次</span>？</h2>
+    <div class="box" style="--a:var(--bad)">
+      <span class="lbl" style="color:var(--bad)">🕵️ 去查：</span>
+      <ul>
+        <li>Falcon 1 一共发射了 <b>几次</b>？</li>
+        <li>前 <b>几次</b>是成功的？几次是炸的？</li>
+        <li>那次<b>终于成功</b>的发射，是哪一年？</li>
+        <li>那之前，公司差点 <b>怎么了</b>？</li>
+      </ul>
+    </div>
+    <p class="tip">🎯 关键词试试："Falcon 1 发射历史" / "SpaceX 早期险些破产"</p>
+  </div>
+</section>
+
+<!-- ⑤ 揭晓 · Falcon 1 时间线 -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <div class="kicker">Falcon 1 五次发射</div>
+    <h2>炸 <span class="accentword">3</span> 次，<br>第 <span class="accentword">4</span> 次才成</h2>
+    <div class="timeline">
+      <span class="tl bad">2006 💥</span>
+      <span class="tl bad">2007 💥</span>
+      <span class="tl bad">2008 💥</span>
+      <span class="tl good">2008/9 ✅</span>
+      <span class="tl good">2009 ✅</span>
+    </div>
+    <p class="big" style="margin-top:18px;color:var(--bad)">第 4 次 = <b>公司的最后一次机会</b></p>
+    <p class="tip">用<b>剩的零件 6 周拼出来</b>。那天不成功，<b>SpaceX 就死了</b>。</p>
+    <a class="vidlink" href="https://www.youtube.com/watch?v=8FQhtMrUQlE" target="_blank" rel="noopener">看 Flight 4 成功 + 马斯克反应</a>
+    <a class="vidlink" href="falcon-timeline.html" target="_blank" rel="noopener" style="--a:var(--gold);margin-left:8px">📅 完整时间线（含技术原因）</a>
+  </div>
+</section>
+
+<!-- ⑥ 侦探任务 ③ · 今天多值 -->
+<section class="slide" style="--a:var(--good)">
+  <div class="inner">
+    <span class="lvtag" style="background:var(--good);color:#06281c">侦探任务 ③ · 今天多值</span>
+    <h2>SpaceX <span class="accentword">今天</span><br>值多少？</h2>
+    <div class="box" style="--a:var(--good)">
+      <span class="lbl" style="color:var(--good)">🕵️ 查：</span>
+      <ul>
+        <li>SpaceX <b>上市</b>了吗？<b>什么时候</b>？在哪个交易所？股票代码是啥？</li>
+        <li>IPO 时估值 <b>多少</b>？</li>
+        <li>马斯克现在占 <b>多少</b>股份？</li>
+        <li>这次上市让多少员工变成了<b>百万富翁</b>？</li>
+      </ul>
+    </div>
+    <p class="tip">💰 算账环节马上要用这些数——<b>记下来</b>。</p>
+    <a class="vidlink" href="https://www.youtube.com/watch?v=6bzxk_LmfO4" target="_blank" rel="noopener" style="--a:var(--good)">看 IPO 敲钟现场 🔔</a>
+  </div>
+</section>
+
+<!-- ⑦ 算账 A · 1 块变多少块 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <span class="emoji">💰</span>
+    <div class="kicker">算账时刻 A · 财商"啊哈"</div>
+    <h2>1 块 → <span class="accentword">?</span> 块</h2>
+    <div class="box" style="--a:var(--p2)">
+      <span class="lbl" style="color:var(--p2)">🧮 拿出计算器：</span>
+      <ul>
+        <li>马斯克 <b>2002</b> 年投了 <b>1 亿美元</b></li>
+        <li>今天他那一块 ≈ <b>7,080 亿美元</b></li>
+      </ul>
+      <b>按一下除法，看结果。</b>
+    </div>
+    <div class="countbig" style="background:linear-gradient(90deg,var(--good),var(--p2));-webkit-background-clip:text;background-clip:text;color:transparent">7,080×</div>
+    <p class="big" style="margin-top:6px">一块 → <span class="accentword">七千多块</span></p>
+    <p class="tip">📈 <b>这就叫回报倍数</b>。投得早、赌对了，复利 + 时间会帮你翻到天上去。</p>
+  </div>
+</section>
+
+<!-- ⑦b 书的彩蛋 · 你知道作者不知道的结局 -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <span class="emoji">📖</span>
+    <div class="kicker">你手里那本书 · 是个时间胶囊</div>
+    <h2>《硅谷钢铁侠》<br><span class="accentword">2015</span> 年写完的</h2>
+    <div class="box" style="--a:var(--warn)">
+      <span class="lbl" style="color:var(--warn)">🕰️ 那时候 SpaceX 值多少？</span>
+      <ul>
+        <li>2015 年（书写完时）：约 <b>120 亿美元</b></li>
+        <li>2026 年（今天）：<b>1.77 万亿美元</b></li>
+        <li>涨了 <b>147 倍</b></li>
+      </ul>
+    </div>
+    <p class="big" style="margin-top:14px;color:var(--warn)">写书的人，<br><b>不知道会涨这么多。</b></p>
+    <p class="tip">📌 但<b>你知道</b>——你读的不是历史，是一个<b>还在涨的故事的前传</b>，而且你偷看了结局。</p>
+  </div>
+</section>
+
+<!-- ⑧ 算账 C · 滚雪球 -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <span class="emoji">⛄</span>
+    <div class="kicker">算账时刻 C · 为什么能翻这么多</div>
+    <h2><span class="accentword">滚雪球</span><br>中途别挖一勺</h2>
+    <p style="margin-top:8px">SpaceX 二十年 <b>几乎不分红</b>，<br>赚的钱 <b>全砸回去</b>做更猛的火箭。</p>
+    <p class="big" style="margin-top:14px;color:var(--warn)">这听起来亏大了吧？</p>
+    <p class="tip">👇 跑一下两个场景对比，自己看</p>
+    <pre class="codeblock">profit, rate = 100, 0.20
+A = sum(profit * (1 + rate)**y for y in range(20))
+B = profit * 20
+print("A · 全再投入:", round(A), "亿")
+print("B · 全分掉:  ", round(B), "亿")
+print("差:", round(A / B, 2), "倍")</pre>
+    <p class="tip">🧪 <b>20 年不够</b>？把 <code>range(20)</code> 改成 <code>range(30)</code> 再跑一次</p>
+  </div>
+</section>
+
+<!-- ⑨ 点睛 + 钩子 -->
+<section class="slide" style="--a:var(--good)">
+  <div class="inner">
+    <span class="emoji">🧠</span>
+    <div class="kicker">今天真正学到的 · 自己抄下来</div>
+    <div class="motto">远大目标 × 不断迭代<br>× 长期不放弃<br>= 别人不敢信的回报</div>
+    <div class="box" style="--a:var(--good)">
+      <span class="lbl" style="color:var(--good)">✍️ 拿笔抄一遍</span>
+      <b>贴在书桌前 / 笔记本扉页</b>——<br>
+      手写比看更记得住。<br>
+      选<b>一个</b>地方贴，别贴在脑子里。
+    </div>
+    <p class="tip" style="margin-top:18px">🎬 <b>下次钩子</b>：等你写程序跑炸了——<br>那不叫失败，那叫<b>第 N 次迭代</b>。<br>SpaceX 干的就是这事。</p>
+    <a class="vidlink" href="https://www.youtube.com/watch?v=8tmVzuDplwQ" target="_blank" rel="noopener" style="--a:var(--good)">听马斯克上市演讲 "I Thought We'd Fail"</a>
+  </div>
+</section>
+
+<div class="hint" id="hint">点击屏幕 / → 翻页</div>
+
+<div class="nav">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="cnt">1 / 10</span>
+  <button id="next" aria-label="下一页">›</button>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const bar=document.getElementById('bar');
+  const cnt=document.getElementById('cnt');
+  const prevBtn=document.getElementById('prev');
+  const nextBtn=document.getElementById('next');
+  const hint=document.getElementById('hint');
+  let i=0;
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    cnt.textContent=(i+1)+' / '+slides.length;
+    prevBtn.disabled=i===0;
+    nextBtn.disabled=i===slides.length-1;
+  }
+  function next(){ if(i<slides.length-1) show(i+1); }
+  function prev(){ if(i>0) show(i-1); }
+  nextBtn.addEventListener('click',e=>{e.stopPropagation();next();});
+  prevBtn.addEventListener('click',e=>{e.stopPropagation();prev();});
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown',' ','Enter'].includes(e.key)){e.preventDefault();next();}
+    if(['ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();prev();}
+  });
+  document.body.addEventListener('click',e=>{
+    if(e.target.closest('a,button,.nav')) return;
+    next();
+  });
+  let x0=null;
+  document.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(x0===null) return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50){ dx<0?next():prev(); }
+    x0=null;
+  },{passive:true});
+  function hideHint(){ hint.classList.add('gone'); }
+  ['click','keydown','touchend'].forEach(ev=>document.addEventListener(ev,hideHint,{once:true}));
+  show(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpaceX 猎鹰 · 屡败屡战时间线</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #07080f;
+    --bg2: #0e1018;
+    --card: #14171f;
+    --line: #2a2e3a;
+    --text: #e6e8ef;
+    --muted: #8b90a0;
+    --fail: #e24b4a;
+    --fail-dim: rgba(226,75,74,0.12);
+    --ok: #1fae7e;
+    --ok-dim: rgba(31,174,126,0.12);
+    --accent: #5b8def;
+  }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: radial-gradient(ellipse at 50% -10%, #15192b 0%, var(--bg) 55%);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  #stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .wrap { position: relative; z-index: 1; max-width: 880px; margin: 0 auto; padding: 56px 24px 80px; }
+  header { text-align: center; margin-bottom: 8px; }
+  h1 { font-size: clamp(26px, 5vw, 40px); font-weight: 700; letter-spacing: -0.5px;
+       background: linear-gradient(90deg, #fff 20%, #8db4ff 100%);
+       -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .sub { color: var(--muted); font-size: 15px; margin-top: 10px; max-width: 600px; margin-inline: auto; }
+
+  .tabs { display: flex; gap: 8px; justify-content: center; margin: 34px 0 10px; flex-wrap: wrap; }
+  .tab {
+    background: var(--card); border: 1px solid var(--line); color: var(--muted);
+    padding: 11px 20px; border-radius: 999px; cursor: pointer; font-size: 14px;
+    font-family: inherit; transition: all .2s; font-weight: 500;
+  }
+  .tab:hover { color: var(--text); border-color: #3d4252; }
+  .tab.active { background: linear-gradient(135deg, #2a3b66, #1a2238); color: #fff; border-color: var(--accent); }
+  .tab .n { color: var(--muted); font-size: 12px; margin-left: 6px; }
+  .tab.active .n { color: #9cb8ff; }
+
+  .panel-meta { text-align: center; color: var(--muted); font-size: 13.5px; margin: 16px 0 30px;
+                padding: 12px 18px; background: rgba(255,255,255,0.025); border-radius: 12px;
+                border: 1px solid var(--line); }
+  .panel-meta b { color: var(--text); font-weight: 600; }
+
+  .timeline { position: relative; padding-left: 38px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 11px; top: 8px; bottom: 8px; width: 2px;
+    background: linear-gradient(180deg, transparent, var(--line) 8%, var(--line) 92%, transparent);
+  }
+  .event { position: relative; margin-bottom: 18px; opacity: 0; transform: translateY(14px);
+           animation: rise .5s ease forwards; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .dot { position: absolute; left: -33px; top: 22px; width: 16px; height: 16px; border-radius: 50%;
+         border: 3px solid var(--bg); box-shadow: 0 0 0 2px currentColor; }
+  .event.fail .dot { background: var(--fail); color: var(--fail); }
+  .event.ok .dot   { background: var(--ok); color: var(--ok); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 18px; transition: transform .2s, border-color .2s, box-shadow .2s;
+  }
+  .card:hover { transform: translateX(4px); border-color: #3d4252;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+  .event.fail .card { border-left: 3px solid var(--fail); }
+  .event.ok   .card { border-left: 3px solid var(--ok); }
+
+  .row1 { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .date { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted);
+          font-weight: 600; letter-spacing: 0.3px; }
+  .mission { font-size: 16px; font-weight: 600; color: var(--text); }
+  .badge { font-size: 12px; font-weight: 600; padding: 3px 11px; border-radius: 999px; margin-left: auto; }
+  .badge.fail { background: var(--fail-dim); color: #ff8786; }
+  .badge.ok   { background: var(--ok-dim); color: #4fd9aa; }
+  .reason { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .reason b { color: #c8ccda; font-weight: 600; }
+  .tag { display: inline-block; font-size: 11.5px; color: #9cb8ff; background: rgba(91,141,239,0.1);
+         padding: 2px 9px; border-radius: 6px; margin-top: 10px; }
+  .vid { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; margin-left: 8px;
+         font-size: 12px; font-weight: 600; text-decoration: none; padding: 4px 11px; border-radius: 999px;
+         border: 1px solid; transition: all .15s; }
+  .event.fail .vid { color: #ff8786; border-color: rgba(226,75,74,0.5); }
+  .event.fail .vid:hover { background: var(--fail); color: #0a0d1c; }
+  .event.ok .vid { color: #4fd9aa; border-color: rgba(31,174,126,0.5); }
+  .event.ok .vid:hover { background: var(--ok); color: #06281c; }
+  .vid::before { content: "🎬"; }
+
+  .footer { margin-top: 44px; padding: 22px 24px; background: rgba(91,141,239,0.06);
+            border: 1px solid rgba(91,141,239,0.18); border-radius: 16px; }
+  .footer h3 { font-size: 15px; color: #9cb8ff; margin-bottom: 8px; }
+  .footer p { color: var(--muted); font-size: 14px; }
+  .footer p b { color: var(--text); }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="wrap">
+  <header>
+    <h1>SpaceX 猎鹰 · 屡败屡战</h1>
+    <p class="sub">两条决定命运的曲线 —— 从入轨到回收，每一次成功都建立在前面一连串失败的逐条排雷之上。</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-arc="f1">猎鹰 1 号 · 入轨之路<span class="n">2006–2009</span></button>
+    <button class="tab" data-arc="f9">猎鹰 9 号 · 回收着陆<span class="n">2015–2016</span></button>
+  </div>
+
+  <div class="panel-meta" id="meta"></div>
+  <div class="timeline" id="timeline"></div>
+
+  <div class="footer">
+    <h3>共同的规律</h3>
+    <p>真正的突破不靠灵光乍现，而是把每次失败的<b>具体故障</b>——盐蚀、燃料晃动、分离时序、液压油余量、着陆腿锁扣、横向速度——逐条吃掉的工程迭代：失败模式<b>可观测、可归因、可在下一次设计里被约束掉</b>。</p>
+  </div>
+</div>
+
+<script>
+const data = {
+  f1: {
+    meta: '前三次失败几乎让公司破产 —— 第四发是 Musk 口中"<b>不成功公司就不存在了</b>"的孤注一掷。猎鹰 1 号是全球首枚由私人研制并入轨的液体燃料火箭。',
+    events: [
+      { date: '2006.03.24', mission: '第一次发射', ok: false, reason: '燃料管接头<b>盐雾腐蚀</b>漏油起火，T+33 秒失控坠海。', vid: '0a_00nJ_Y88' },
+      { date: '2007.03.21', mission: '第二次发射', ok: false, reason: '二级<b>燃料晃动</b>引发滚转失控，未达轨道速度（约 289 km 高度）。', vid: '62ScmkJzpXA' },
+      { date: '2008.08.03', mission: '第三次发射', ok: false, reason: '新 Merlin 1C <b>残余推力</b>致一二级分离碰撞，约 T+2 分钟解体。', vid: 'DPMVH260PDo' },
+      { date: '2008.09.28', mission: '第四次发射', ok: true, reason: '载 RatSat 配重<b>成功入轨</b>，全球首枚私人研制液体火箭入轨。', tag: '救命一发 · 公司转危为安', vid: '8FQhtMrUQlE' },
+      { date: '2009.07.14', mission: '第五次发射', ok: true, reason: '发射马来西亚 <b>RazakSAT</b>，唯一搭载实用载荷的一次，之后退役让位猎鹰 9 号。', tag: '首次商业发射', vid: '5J6iUg_Izs4' },
+    ]
+  },
+  f9: {
+    meta: '入轨已不是问题，难点变成让一级火箭<b>垂直回收</b>。海上成功前，火箭都能飞抵驳船，却始终没能稳稳"立住"。',
+    events: [
+      { date: '2015.01.10', mission: 'CRS-5 · 首次驳船着陆', ok: false, reason: '栅格舵<b>液压油耗尽</b>，箭体硬着陆解体。', vid: 'bvim4rsNHkQ' },
+      { date: '2015.04.14', mission: 'CRS-6 · 驳船着陆', ok: false, reason: '<b>横向速度过大</b>，落船后倾倒爆炸。', vid: 'jVSZdsAq4Bo' },
+      { date: '2015.12.21', mission: 'Orbcomm OG2 · 陆地着陆', ok: true, reason: '在卡角 <b>LZ-1 着陆区</b>完成，史上首次轨道级火箭陆上回收。', tag: '陆地首次成功', vid: 'O5bTbVbe4e4' },
+      { date: '2016.01.17', mission: 'Jason-3 · 驳船着陆', ok: false, reason: '一条<b>着陆腿锁扣失效</b>，触船后倾倒。', vid: 'jshk8ZVIgdI' },
+      { date: '2016.04.08', mission: 'CRS-8 · 海上驳船着陆', ok: true, reason: '于 "Of Course I Still Love You" 号上，<b>史上首次海上回收</b>，此后逐步常规化。', tag: '海上首次成功', vid: 'sYmQQn_ZSys' },
+    ]
+  }
+};
+
+const tl = document.getElementById('timeline');
+const metaEl = document.getElementById('meta');
+
+function render(arc) {
+  metaEl.innerHTML = data[arc].meta;
+  tl.innerHTML = '';
+  data[arc].events.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.className = 'event ' + (e.ok ? 'ok' : 'fail');
+    div.style.animationDelay = (i * 0.08) + 's';
+    div.innerHTML = `
+      <span class="dot"></span>
+      <div class="card">
+        <div class="row1">
+          <span class="date">${e.date}</span>
+          <span class="mission">${e.mission}</span>
+          <span class="badge ${e.ok ? 'ok' : 'fail'}">${e.ok ? '成功' : '失败'}</span>
+        </div>
+        <div class="reason">${e.reason}</div>
+        ${e.tag ? `<span class="tag">${e.tag}</span>` : ''}
+        ${e.vid ? `<a class="vid" href="https://www.youtube.com/watch?v=${e.vid}" target="_blank" rel="noopener">看现场</a>` : ''}
+      </div>`;
+    tl.appendChild(div);
+  });
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    render(t.dataset.arc);
+  });
+});
+
+render('f1');
+
+// starfield
+const c = document.getElementById('stars'), x = c.getContext('2d');
+let stars = [];
+function resize() {
+  c.width = innerWidth; c.height = innerHeight;
+  stars = Array.from({length: 140}, () => ({
+    x: Math.random() * c.width, y: Math.random() * c.height,
+    r: Math.random() * 1.3 + 0.2, a: Math.random(), s: Math.random() * 0.015 + 0.003
+  }));
+}
+function draw() {
+  x.clearRect(0, 0, c.width, c.height);
+  stars.forEach(st => {
+    st.a += st.s; if (st.a > 1 || st.a < 0) st.s *= -1;
+    x.beginPath(); x.arc(st.x, st.y, st.r, 0, 7);
+    x.fillStyle = `rgba(180,200,255,${Math.abs(st.a) * 0.7})`; x.fill();
+  });
+  requestAnimationFrame(draw);
+}
+addEventListener('resize', resize);
+resize(); draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>怎么用 AI 又不被它骗 · 播放版</title>
+<style>
+  :root{
+    --bg:#0f1226; --card:#1a1f3a; --ink:#eef1ff; --dim:#aab2d5;
+    --p1:#7c5cff; --p2:#22d3ee; --good:#34d399; --warn:#fbbf24; --bad:#fb7185;
+    --a:var(--p1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 700px at 70% -10%,#2a2168 0,transparent 60%),var(--bg);
+    color:var(--ink); line-height:1.65; overflow:hidden;
+  }
+
+  /* 每张幻灯片 = 一个点，整屏居中 */
+  .slide{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    padding:48px 22px 96px; text-align:center;
+    opacity:0; visibility:hidden; transform:translateY(18px);
+    transition:opacity .4s ease, transform .4s ease;
+    pointer-events:none;
+  }
+  .slide.active{opacity:1; visibility:visible; transform:none; pointer-events:auto}
+  .inner{max-width:680px; width:100%}
+
+  .kicker{color:var(--a);font-weight:800;letter-spacing:3px;font-size:15px;margin-bottom:14px}
+  .emoji{font-size:68px;line-height:1;margin-bottom:18px;display:block}
+  h1{font-size:clamp(32px,8vw,50px);line-height:1.2;margin:6px 0 14px;
+     background:linear-gradient(90deg,var(--p1),var(--p2));
+     -webkit-background-clip:text;background-clip:text;color:transparent}
+  h2{font-size:clamp(25px,6.2vw,36px);line-height:1.3;margin:4px 0 14px}
+  .big{font-size:clamp(22px,5.6vw,30px);font-weight:800;margin:8px 0;color:var(--ink)}
+  p{color:#dfe4ff;font-size:clamp(18px,4.6vw,22px)}
+  .sub{color:var(--dim)}
+  .accentword{color:var(--a)}
+
+  /* 举例框 */
+  .eg{background:#12162e;border:1px solid #2b315c;border-left:4px solid var(--a);
+    border-radius:12px;padding:15px 17px;margin-top:18px;text-align:left;
+    font-size:clamp(16px,4.2vw,19px);line-height:1.65;color:#dfe4ff}
+  .eg .lbl{color:var(--a);font-weight:800;font-size:15px;letter-spacing:1px;
+    display:block;margin-bottom:7px}
+  .eg b{color:var(--ink)}
+  .eg .num{color:var(--warn);font-weight:800}
+
+  /* demo 对话 */
+  .demo{border:1px dashed #3a4170;border-radius:14px;padding:16px;background:#12162e;text-align:left;margin-top:8px}
+  .bubble{border-radius:12px;padding:13px 15px;margin:9px 0;font-size:clamp(16px,4vw,18px);line-height:1.6}
+  .me{background:#23305c}
+  .ai{background:#2a2150;border-left:3px solid var(--p1)}
+  .ai b{color:var(--p2)}
+  .code{background:#0a0d1c;border:1px solid #2b315c;border-radius:10px;
+    padding:13px 14px;margin:9px 0;font-family:"SF Mono",Menlo,Consolas,monospace;
+    font-size:clamp(14px,3.6vw,16px);line-height:1.7;color:#cdd5ff;text-align:left;
+    white-space:pre;overflow-x:auto}
+  .code .cm{color:#7e88b8}
+  .code .out{color:var(--warn);font-weight:700}
+  /* 成绩表 */
+  .tbl{width:100%;border-collapse:collapse;margin-top:16px;
+    font-size:clamp(17px,4.4vw,20px);overflow:hidden;border-radius:12px}
+  .tbl th,.tbl td{border:1px solid #2b315c;padding:11px 10px;text-align:center}
+  .tbl th{background:#23305c;color:var(--p2);font-weight:800}
+  .tbl td{background:#12162e}
+  .tbl tr td:first-child{color:var(--dim)}
+  .tbl .absent td{color:var(--bad);font-weight:800;background:rgba(251,113,133,.08)}
+  .ask{margin-top:16px;font-weight:800;font-size:clamp(18px,4.6vw,22px);color:var(--ink)}
+  .ask em{color:var(--p2);font-style:normal}
+  button.reveal{margin-top:8px;background:linear-gradient(90deg,var(--p1),var(--p2));
+    color:#fff;border:0;padding:13px 18px;border-radius:11px;font-size:clamp(15px,3.8vw,17px);
+    font-weight:700;cursor:pointer;width:100%}
+  .answer{display:none;margin-top:12px;border-radius:12px;padding:15px;
+    font-size:clamp(15px,3.9vw,17px);line-height:1.6;
+    background:rgba(251,191,36,.12);border:1px solid var(--warn)}
+  .answer.show{display:block;animation:pop .3s ease}
+  @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+  .answer .tag{color:var(--warn);font-weight:800}
+
+  /* 魔法问题 / 阶梯 */
+  .qbox{border-radius:16px;padding:22px 20px;border:1px solid;margin-top:6px}
+  .lv{font-size:15px;font-weight:800;letter-spacing:1px;opacity:.85}
+  .qtext{font-size:clamp(24px,6vw,32px);font-weight:900;margin:8px 0}
+  .badge{display:inline-block;font-size:14px;background:var(--good);color:#06281c;
+    padding:3px 11px;border-radius:20px;font-weight:800;margin-top:6px}
+
+  /* 怎么验 四招 */
+  .moves{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+  .move{background:#12162e;border:1px solid #2b315c;border-radius:14px;padding:16px 12px}
+  .move .ic{font-size:38px}
+  .move b{display:block;font-size:clamp(17px,4.4vw,19px);margin:6px 0 2px}
+  .move span{color:var(--dim);font-size:clamp(14px,3.6vw,15px)}
+
+  /* 档案馆案例 */
+  .case{display:flex;gap:14px;align-items:center;text-decoration:none;
+    background:#12162e;border:1px solid #2b315c;border-radius:14px;
+    padding:18px 18px;text-align:left;transition:border-color .15s,transform .15s}
+  .case:hover{border-color:var(--a);transform:translateY(-1px)}
+  .case .ic{font-size:42px;flex:0 0 auto}
+  .case .body b{color:var(--ink);font-size:clamp(17px,4.4vw,21px);line-height:1.35;display:block}
+  .case .body span{color:var(--dim);font-size:clamp(15px,3.9vw,16px);line-height:1.5}
+  .case .go{margin-left:auto;color:var(--a);font-size:22px;flex:0 0 auto}
+  .srcline{color:var(--dim);font-size:13px;margin-top:14px}
+  .srcline a{color:var(--p2);font-weight:700}
+
+  /* 口诀 */
+  .motto{font-size:clamp(24px,6vw,38px);font-weight:900;margin:10px 0;
+    background:linear-gradient(90deg,var(--p2),var(--good));-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+
+  /* 控件 */
+  #bar{position:fixed;top:0;left:0;height:4px;width:0;
+    background:linear-gradient(90deg,var(--p1),var(--p2));transition:width .35s ease;z-index:30}
+  .nav{position:fixed;bottom:0;left:0;right:0;height:72px;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 18px;background:linear-gradient(0deg,rgba(15,18,38,.95),transparent)}
+  .nav button{background:#1a1f3a;border:1px solid #2b315c;color:var(--ink);
+    width:48px;height:48px;border-radius:50%;font-size:22px;cursor:pointer;
+    display:grid;place-items:center;transition:.15s}
+  .nav button:hover{border-color:var(--p1)}
+  .nav button:disabled{opacity:.3;cursor:default}
+  #cnt{color:var(--dim);font-size:14px;font-weight:700;letter-spacing:1px}
+  .hint{position:fixed;bottom:84px;left:0;right:0;text-align:center;
+    color:#6f78a6;font-size:13px;z-index:20;animation:bob 1.6s ease-in-out infinite;pointer-events:none}
+  .hint.gone{display:none}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+  @media(max-width:520px){.moves{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+
+<!-- ① 封面 -->
+<section class="slide active" style="--a:var(--p2)">
+  <div class="inner">
+    <span class="emoji">🤖</span>
+    <div class="kicker">用 AI 写代码 · 第一课</div>
+    <h1>怎么用 AI<br>又不被它骗？</h1>
+    <p class="sub">AI 很能干，但它会一脸自信地说错。<br>真正厉害的人，是会"使唤"它、又看得穿它的人。</p>
+  </div>
+</section>
+
+<!-- ② 真相 1 -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <span class="emoji">⚡</span>
+    <div class="kicker">真相 1</div>
+    <h2>它超能干 —— 但</h2>
+    <div class="big" style="font-size:clamp(30px,9vw,56px);color:var(--p1)">能跑 ≠ 对</div>
+    <div class="eg">
+      <span class="lbl">🧪 就拿你写作业的事举例</span>
+      你让 AI 写个"<b>算全班平均分</b>"的程序。它跑出来 <span class="num">68 分</span>，没报错、看着挺正常——
+      可它把<b>缺考那个同学当成 0 分</b>算进去了，真实平均分其实是 <span class="num">85 分</span>。<br>
+      <b>程序跑得好好的，数却是错的。</b>这种错最坑，因为它不报错。<br>
+      （下一页我们把这事完整演一遍 👉）</div>
+  </div>
+</section>
+
+<!-- ②.4 题目背景 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <div class="kicker">先把题目搞清楚</div>
+    <h2 style="font-size:clamp(22px,5.4vw,30px)">📋 题目：算全班平均分</h2>
+    <p style="margin-top:6px">老师给了一张成绩表，全班 <b>5 个人</b>，<br>其中<b style="color:var(--bad)">阿杰这次缺考、没有成绩</b>。</p>
+    <table class="tbl">
+      <tr><th>学生</th><th>这次成绩</th></tr>
+      <tr><td>小明</td><td>88</td></tr>
+      <tr><td>小红</td><td>92</td></tr>
+      <tr><td>小刚</td><td>76</td></tr>
+      <tr><td>小美</td><td>84</td></tr>
+      <tr class="absent"><td>阿杰</td><td>缺考</td></tr>
+    </table>
+    <p class="ask">问：<em>这次考试，全班平均分是多少？</em></p>
+  </div>
+</section>
+
+<!-- ②.5 模拟现场：算平均分翻车 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <div class="kicker">现场演一遍 · 看 AI 怎么算</div>
+    <h2 style="font-size:clamp(20px,5vw,28px)">🧮 AI 写的程序，跑通了 —— 对吗？</h2>
+    <div class="demo">
+      <div class="bubble me">🙋 我：照这张成绩表，帮我算全班平均分。</div>
+      <div class="bubble ai">🤖 AI：好的！这是代码 👇</div>
+      <div class="code"><span class="cm"># 小明88 小红92 小刚76 小美84，阿杰这次缺考</span>
+scores = [88, 92, 76, 84, 0]   <span class="cm"># 阿杰缺考 → 记成 0</span>
+average = sum(scores) / len(scores)
+print(average)                 <span class="cm"># 跑出来：</span><span class="out">68.0</span></div>
+      <button class="reveal" onclick="document.getElementById('ans2').classList.add('show')">
+        ▶️ 它跑通了，打印出 68 分……这答案能交吗？
+      </button>
+      <div class="answer" id="ans2">
+        <span class="tag">💡 真相</span>
+        不能！<b>阿杰是缺考，不该算进去。</b><br>
+        真上考场的 4 个人：(88+92+76+84) ÷ <b>4</b> = <b>85 分</b>。<br>
+        AI 却把缺考的 0 也除进了 <b>5</b> 个人里，把平均分硬拉低了 17 分。<br><br>
+        程序<b>没报错、跑得顺顺的</b>——但答案是错的。<b>这就是"能跑 ≠ 对"。</b>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ③ 真相 2 -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <span class="emoji">😎</span>
+    <div class="kicker">真相 2</div>
+    <h2>对或错，<span class="accentword">它都一样自信</span></h2>
+    <div class="eg">
+      <span class="lbl">🙋 想象班上那个"万事通"</span>
+      老师问啥他都秒举手、答得特顺、特有道理。但他<b>答对、答错时，表情和语气一模一样</b>。
+      你光看他那个自信样，根本判断不出这次他到底对不对。<br>
+      <b>AI 就是这个同学</b>——而且它"读过的书"比整个学校加起来还多，所以更唬人。</div>
+    <p class="big" style="margin-top:16px">"听起来对" ≠ "真的对"。</p>
+  </div>
+</section>
+
+<!-- ④ demo：2100 闰年 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <div class="kicker">来看个现场</div>
+    <h2>🤔 它一脸自信 —— 那它一定对吗？</h2>
+    <div class="demo">
+      <div class="bubble me">🙋 我：帮我判断 <b>2100 年</b>是不是闰年。</div>
+      <div class="bubble ai">🤖 AI：闰年规则——能被 4 整除、但能被 100 整除的不算、除非还能被 400 整除。<br>
+        2100÷4=525 ✅、2100÷100=21 ✅、2100÷400=5.25 ❌<br>
+        所以 <b>2100 年不是闰年</b>，是平年（365 天）。</div>
+      <button class="reveal" onclick="document.getElementById('ans').classList.add('show')">
+        👀 它讲得头头是道、还带算式……能直接信吗？
+      </button>
+      <div class="answer" id="ans">
+        <span class="tag">💡 真相</span>
+        这次它<b>真的算对了</b>。但注意——<b>它说对和说错时一样自信、一样有算式</b>。所以你光听它，永远分不清对错。<br><br>
+        靠得住的只有一招：<b>自己验。</b>（你自己算 2100÷400=5.25 不整除，立刻确认。）<br><br>
+        ⚠️ 换个题，它可能就这么自信地<b>说错</b>——所以不管它多笃定，都要验。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑤ 魔法问题开场 -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <span class="emoji">🪄</span>
+    <h2>三个魔法问题</h2>
+    <p style="margin-top:8px">以后 AI 给你东西，别只问第一个——<br><span class="big" style="color:var(--p2)">三个都问一遍。</span></p>
+    <p class="sub" style="margin-top:14px">还拿刚才那个<b>"算平均分"</b>的程序，<br>这三个问题该这么问 👇</p>
+  </div>
+</section>
+
+<!-- ⑥ 魔法问题 1 -->
+<section class="slide" style="--a:var(--good)">
+  <div class="inner">
+    <div class="qbox" style="border-color:var(--good);background:rgba(52,211,153,.10)">
+      <div class="lv" style="color:var(--good)">第 1 级 · 理解</div>
+      <div class="qtext">"这行是什么意思？"</div>
+      <span class="badge">你已经会啦 ✅</span>
+      <div class="eg" style="--a:var(--good)">
+        看到 <b>total / len(scores)</b> —— 哦，是"总分 ÷ 人数"。看懂了。<br>
+        但<b>看懂 ≠ 它没把缺考那人算错</b>。看懂只是第一步。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑦ 魔法问题 2 -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <div class="qbox" style="border-color:var(--warn);background:rgba(251,191,36,.10)">
+      <div class="lv" style="color:var(--warn)">第 2 级 · 判断</div>
+      <div class="qtext">"这真的对吗？<br>我怎么验证？"</div>
+      <div class="eg" style="--a:var(--warn)">
+        拿你<b>自己手算过答案</b>的 3 个分数喂进去，看它算得跟你一样吗？<br>
+        再专门问一句：那个<b>缺考的同学，它到底算没算进去？</b><br>
+        别急着信——想办法<b>证明它对</b>，而不是默认它对。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑧ 魔法问题 3 -->
+<section class="slide" style="--a:var(--bad)">
+  <div class="inner">
+    <div class="qbox" style="border-color:var(--bad);background:rgba(251,113,133,.10)">
+      <div class="lv" style="color:var(--bad)">第 3 级 · 找漏洞</div>
+      <div class="qtext">"它什么时候会出错？"</div>
+      <div class="eg" style="--a:var(--bad)">
+        高手都会想：<b>什么刁钻情况能让它翻车？</b><br>
+        全班都缺考（除以 0 会不会崩）？有人输了<b>负分</b>？有人填了<b>"缺考"两个字</b>而不是数字？<br>
+        你能想到的坑越多，越不容易被它坑。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑨ 怎么验 · 警告 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <span class="emoji">🔍</span>
+    <h2>怎么"验"？</h2>
+    <p class="big" style="color:var(--warn);margin-top:8px">⚠️ 光问 A"你对吗"没用。</p>
+    <p style="margin-top:10px">问<b>写这段代码的同一个 AI</b>"你对吗"，<br>等于让它自己夸自己——它当然说对。</p>
+  </div>
+</section>
+
+<!-- ⑩ 怎么验 · 四招 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <div class="kicker">真正的验证靠这四招</div>
+    <h2>自己验，这样验 👇</h2>
+    <div class="moves">
+      <div class="move"><div class="ic">▶️</div><b>跑一遍</b><span>用你手算过的分数喂进去</span></div>
+      <div class="move"><div class="ic">🎯</div><b>拿刁钻例子测</b><span>全缺考？负分？一个人都没有？</span></div>
+      <div class="move"><div class="ic">🧠</div><b>自己脑子过</b><span>这逻辑我认同吗？</span></div>
+      <div class="move"><div class="ic">🌐</div><b>换处核实</b><span>别只听写代码那个 AI</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑪ 档案馆开场 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <span class="emoji">🗂️</span>
+    <h2>AI 翻车档案馆</h2>
+    <p style="margin-top:8px">接下来全是<b>真实发生、上过新闻</b>的事。<br>不是吓唬你——点开能看原文。</p>
+  </div>
+</section>
+
+<!-- ⑫ 案例 谷歌披萨 -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <div class="kicker">😂 离谱但真实</div>
+    <a class="case" href="https://theconversation.com/eat-a-rock-a-day-put-glue-on-your-pizza-how-googles-ai-is-losing-touch-with-reality-230953" target="_blank" rel="noopener">
+      <span class="ic">🍕</span><span class="body"><b>谷歌 AI 教人往披萨上抹胶水、每天吃一块石头</b>
+      <span>把一个 11 岁小孩发的网络玩笑，当成了真知识。</span></span><span class="go">↗</span></a>
+  </div>
+</section>
+
+<!-- ⑬ 案例 DPD -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <div class="kicker">😂 离谱但真实</div>
+    <a class="case" href="https://time.com/6564726/ai-chatbot-dpd-curses-criticizes-company/" target="_blank" rel="noopener">
+      <span class="ic">🤬</span><span class="body"><b>快递公司客服机器人爆粗口、写诗骂自己公司</b>
+      <span>被顾客一逗，就说"DPD 是全世界最烂的快递"。公司连夜关停。</span></span><span class="go">↗</span></a>
+  </div>
+</section>
+
+<!-- ⑭ 案例 雪佛兰 -->
+<section class="slide" style="--a:var(--warn)">
+  <div class="inner">
+    <div class="kicker">😂 离谱但真实</div>
+    <a class="case" href="https://www.evidentlyai.com/blog/ai-failures-examples" target="_blank" rel="noopener">
+      <span class="ic">🚗</span><span class="body"><b>网友忽悠 4S 店机器人，1 美元"买"下一辆 7 万美元的车</b>
+      <span>它居然回答"成交，法律有效"。</span></span><span class="go">↗</span></a>
+  </div>
+</section>
+
+<!-- ⑮ 案例 律师 -->
+<section class="slide" style="--a:var(--bad)">
+  <div class="inner">
+    <div class="kicker">🏛️ 真出事了 · 信它不验证会倒霉</div>
+    <a class="case" href="https://en.wikipedia.org/wiki/Mata_v._Avianca,_Inc." target="_blank" rel="noopener">
+      <span class="ic">⚖️</span><span class="body"><b>律师用 ChatGPT 查案例，它编了 6 个假判例，律师被罚款</b>
+      <span>律师还回头问 AI"这些是真的吗"，AI 自信担保"是真的"——结果全是假的。</span></span><span class="go">↗</span></a>
+  </div>
+</section>
+
+<!-- ⑯ 案例 加航 -->
+<section class="slide" style="--a:var(--bad)">
+  <div class="inner">
+    <div class="kicker">🏛️ 真出事了 · 信它不验证会倒霉</div>
+    <a class="case" href="https://www.cbsnews.com/news/aircanada-chatbot-discount-customer/" target="_blank" rel="noopener">
+      <span class="ic">✈️</span><span class="body"><b>加拿大航空的 AI 客服乱承诺退款，公司被法院判赔</b>
+      <span>公司辩称"机器人说的不算"，法院不接受。</span></span><span class="go">↗</span></a>
+  </div>
+</section>
+
+<!-- ⑰ 自己试试 strawberry -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <div class="kicker">🔬 自己试试（新版可能已修好）</div>
+    <a class="case" href="https://prompt.16x.engineer/blog/why-chatgpt-cant-count-rs-in-strawberry" target="_blank" rel="noopener">
+      <span class="ic">🍓</span><span class="body"><b>"strawberry 里有几个字母 r？"</b>
+      <span>很多 AI 答 2（错，是 3）。因为它不是一个字母一个字母看的。</span></span><span class="go">↗</span></a>
+  </div>
+</section>
+
+<!-- ⑱ 自己试试 9.11 -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <div class="kicker">🔬 自己试试（新版可能已修好）</div>
+    <a class="case" href="https://news.ulektz.com/2025/03/27/ai-number-comparison-why-do-ai-models/" target="_blank" rel="noopener">
+      <span class="ic">🔢</span><span class="body"><b>"9.11 和 9.9 哪个大？"</b>
+      <span>很多 AI 答 9.11 更大（错）。它把数字当成了版本号。</span></span><span class="go">↗</span></a>
+  </div>
+</section>
+
+<!-- ⑲ 彩蛋：别全信我 -->
+<section class="slide" style="--a:var(--p1)">
+  <div class="inner">
+    <span class="emoji">🃏</span>
+    <h2>连这些故事，<br>你也别全信我</h2>
+    <p style="margin-top:12px">有人说"<b>篮球</b>教练被 AI 害得解雇"——<br>我一查：真相是<b>足球</b>教练，而且<b>本人否认</b>。</p>
+    <p class="big" style="margin-top:14px;color:var(--p2)">二手消息一传就走样。<br>所以原文链接都放上面了，自己点开看。</p>
+    <p class="srcline"><a href="https://ia.acs.org.au/article/2026/football-manager-denies-running-club-with-chatgpt.html" target="_blank" rel="noopener">（这条的来源 ↗）</a></p>
+  </div>
+</section>
+
+<!-- ⑳ 口诀 -->
+<section class="slide" style="--a:var(--good)">
+  <div class="inner">
+    <span class="emoji">⭐</span>
+    <div class="kicker">记住这句</div>
+    <div class="motto">能跑 ≠ 对 · 自己验 · 问到底</div>
+    <p style="margin-top:18px">还有一条：<b>我交出去的东西，我得看得懂。</b></p>
+    <p class="sub" style="margin-top:8px">看得懂、能验、能改 —— 这才是你比"只会复制粘贴的人"强的地方。</p>
+  </div>
+</section>
+
+<!-- 小结和启示 -->
+<section class="slide" style="--a:var(--p2)">
+  <div class="inner">
+    <span class="emoji">🧭</span>
+    <div class="kicker">小结和启示</div>
+    <h2>AI 很强，<br>但方向盘在你手里</h2>
+    <div class="box" style="--a:var(--p2)">
+      <span class="lbl">今天想传递的核心：</span>
+      <ul>
+        <li>AI 可以帮你更快做出东西，但不能替你负责。</li>
+        <li>看起来顺、能跑、会回答，都不等于一定对。</li>
+        <li>你要学会提问、验证、改进，最后能解释自己交出去的东西。</li>
+      </ul>
+    </div>
+    <p class="tip">接下来学的不是“怎么依赖 AI”，而是怎么<b>驾驭 AI</b>。</p>
+  </div>
+</section>
+
+<div class="hint" id="hint">点击屏幕 / → 翻页</div>
+
+<div class="nav">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="cnt">1 / 20</span>
+  <button id="next" aria-label="下一页">›</button>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const bar=document.getElementById('bar');
+  const cnt=document.getElementById('cnt');
+  const prevBtn=document.getElementById('prev');
+  const nextBtn=document.getElementById('next');
+  const hint=document.getElementById('hint');
+  let i=0;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    cnt.textContent=(i+1)+' / '+slides.length;
+    prevBtn.disabled=i===0;
+    nextBtn.disabled=i===slides.length-1;
+  }
+  function next(){ if(i<slides.length-1) show(i+1); }
+  function prev(){ if(i>0) show(i-1); }
+
+  // 按钮
+  nextBtn.addEventListener('click',e=>{e.stopPropagation();next();});
+  prevBtn.addEventListener('click',e=>{e.stopPropagation();prev();});
+
+  // 键盘
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown',' ','Enter'].includes(e.key)){e.preventDefault();next();}
+    if(['ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();prev();}
+  });
+
+  // 点击屏幕翻页（点链接/按钮不翻）
+  document.body.addEventListener('click',e=>{
+    if(e.target.closest('a,button,.nav')) return;
+    next();
+  });
+
+  // 触摸滑动
+  let x0=null;
+  document.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(x0===null) return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50){ dx<0?next():prev(); }
+    x0=null;
+  },{passive:true});
+
+  // 翻过一页就藏掉提示
+  function hideHint(){ hint.classList.add('gone'); }
+  ['click','keydown','touchend'].forEach(ev=>document.addEventListener(ev,hideHint,{once:true}));
+
+  show(0);
+</script>
+</body>
+</html>
