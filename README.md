@@ -49,3 +49,9 @@ AI-Learning/
 ## 发布到 GitHub Pages
 
 在仓库的 **Settings → Pages** 中，将来源设置为 **Deploy from a branch**，选择 `main` 分支和根目录 `/ (root)`，保存后等待部署完成。
+
+## Today's Summary — 2026-07-26
+
+1. Corrected the file and folder naming from `learing` to `learning`.
+2. Added different fruits with varied point values to make the Snake game more interesting.
+3. Used Codex to make the game easy to open directly from the project files, including an offline version.
