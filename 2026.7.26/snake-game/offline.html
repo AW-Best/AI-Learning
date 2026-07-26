@@ -10,14 +10,15 @@
     main{width:min(94vw,980px);display:grid;grid-template-columns:300px minmax(320px,520px);gap:64px;align-items:center;padding:32px}
     .tag{font-size:12px;font-weight:700;letter-spacing:.12em}.tag:before{content:"";display:inline-block;width:8px;height:8px;background:var(--green);border-radius:50%;margin-right:9px}
     h1{font:500 58px/1.08 Georgia,"Songti SC",serif;margin:20px 0}h1 em{color:var(--green);font-weight:500}.lead{color:#677a72;line-height:1.8;font-size:14px}
-    .scores{display:flex;gap:42px;border-block:1px solid var(--line);padding:20px 0;margin:28px 0}.scores span{display:block;font-size:11px;color:#73837c}.scores strong{font:500 34px Georgia,serif}
+    .scores{display:flex;gap:42px;border-block:1px solid var(--line);padding:20px 0;margin:28px 0 14px}.scores span{display:block;font-size:11px;color:#73837c}.scores strong{font:500 34px Georgia,serif}
+    .legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:0 0 24px;color:#677a72;font-size:10px}.legend span{display:flex;align-items:center;gap:5px}.fruit-icon{font-size:15px;font-style:normal;line-height:1}
     .speeds{display:flex;gap:5px;border:1px solid var(--line);padding:4px;border-radius:10px}.speeds button{flex:1;border:0;background:transparent;border-radius:7px;padding:8px;cursor:pointer}.speeds button.on{background:var(--ink);color:#fff}
     .card{background:#fffdf8;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 20px 50px #173c3216}.meta,.foot{display:flex;justify-content:space-between;align-items:center;padding:0 3px 13px;color:#6d7e76;font-size:11px}
     #board{display:grid;grid-template-columns:repeat(20,1fr);aspect-ratio:1;background-color:#f1f7f1;background-image:linear-gradient(#dfe9e1 1px,transparent 1px),linear-gradient(90deg,#dfe9e1 1px,transparent 1px);background-size:5% 5%;border:8px solid #e4eee7;border-radius:12px;position:relative;overflow:hidden}
-    .cell{margin:1px;border-radius:3px}.snake{background:#308f69;box-shadow:inset 0 0 0 1px #287b5c}.head{background:var(--ink);border-radius:6px}.food{margin:3px;background:#e66856;border-radius:50%;box-shadow:inset -2px -2px #bd4d40}
+    .cell{margin:1px;border-radius:3px}.snake{background:#308f69;box-shadow:inset 0 0 0 1px #287b5c}.head{background:var(--ink);border-radius:6px}.food{margin:0;display:grid;place-items:center;font-size:clamp(13px,2vw,22px);line-height:1;filter:drop-shadow(0 1px 1px #173c3240)}
     .cover{position:absolute;inset:0;background:#173c324d;display:grid;place-items:center;z-index:2}.dialog{background:#fffdf8ee;border-radius:14px;padding:24px;text-align:center;min-width:205px}.dialog strong{display:block;font:500 45px Georgia,serif;margin:6px}.dialog button,.start{border:0;background:var(--ink);color:white;border-radius:9px;padding:11px 24px;font-weight:700;cursor:pointer}.dialog small{display:block;color:#7b8983;margin-top:10px}
     .foot{padding:13px 3px 0}.foot button{border:0;background:transparent;color:var(--green);font-weight:700;cursor:pointer}.controls{display:none;text-align:center;margin-top:12px}.controls button{width:46px;height:42px;margin:2px;border:1px solid var(--line);border-radius:9px;background:#eff5f0;font-size:20px}
-    @media(max-width:760px){main{grid-template-columns:1fr;gap:28px;max-width:550px}.intro{text-align:center}h1{font-size:44px;margin:12px}.scores{justify-content:center}.controls{display:block}}
+    @media(max-width:760px){main{grid-template-columns:1fr;gap:28px;max-width:550px}.intro{text-align:center}h1{font-size:44px;margin:12px}.scores,.legend{justify-content:center}.controls{display:block}}
   </style>
 </head>
 <body>
@@ -28,6 +29,7 @@
     <p class="lead">使用方向键或 WASD 操作。避开墙壁和自己，挑战你的最高纪录。</p>
     <div class="scores"><div><span>本局得分</span><strong id="score">000</strong></div><div><span>最高纪录</span><strong id="best">000</strong></div></div>
     <div class="speeds"><button data-speed="175">悠闲</button><button class="on" data-speed="125">经典</button><button data-speed="80">疾速</button></div>
+    <div class="legend" aria-label="Fruit point values"><span><i class="fruit-icon">🍎</i>Apple +10</span><span><i class="fruit-icon">🍊</i>Orange +20</span><span><i class="fruit-icon">🫐</i>Berry +30</span></div>
   </section>
   <section class="card">
     <div class="meta"><span id="status">● 准备出发</span><span id="length">长度 3</span></div>
@@ -37,20 +39,20 @@
   </section>
 </main>
 <script>
-  const N=20,V={UP:[0,-1],DOWN:[0,1],LEFT:[-1,0],RIGHT:[1,0]},OP={UP:"DOWN",DOWN:"UP",LEFT:"RIGHT",RIGHT:"LEFT"};
+  const N=20,V={UP:[0,-1],DOWN:[0,1],LEFT:[-1,0],RIGHT:[1,0]},OP={UP:"DOWN",DOWN:"UP",LEFT:"RIGHT",RIGHT:"LEFT"},FRUITS={apple:10,orange:20,berry:30},FRUIT_ICONS={apple:"🍎",orange:"🍊",berry:"🫐"},FRUIT_KINDS=Object.keys(FRUITS);
   const board=document.querySelector("#board"),scoreEl=document.querySelector("#score"),bestEl=document.querySelector("#best"),statusEl=document.querySelector("#status"),lengthEl=document.querySelector("#length");
   let snake,food,dir,nextDir,state,score,speed=125,timer,best=Number(localStorage.getItem("snake-offline-best")||0);
   bestEl.textContent=String(best).padStart(3,"0");
-  const foodAt=()=>{const free=[];for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(!snake.some(p=>p.x===x&&p.y===y))free.push({x,y});return free[Math.floor(Math.random()*free.length)]};
-  function reset(){clearInterval(timer);snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];food={x:14,y:10};dir=nextDir="RIGHT";state="ready";score=0;update();render()}
+  const foodAt=()=>{const free=[];for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(!snake.some(p=>p.x===x&&p.y===y))free.push({x,y});const point=free[Math.floor(Math.random()*free.length)]||{x:4,y:4};return{...point,kind:FRUIT_KINDS[Math.floor(Math.random()*FRUIT_KINDS.length)]}};
+  function reset(){clearInterval(timer);snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];food={x:14,y:10,kind:"apple"};dir=nextDir="RIGHT";state="ready";score=0;update();render()}
   function update(){scoreEl.textContent=String(score).padStart(3,"0");bestEl.textContent=String(best).padStart(3,"0");lengthEl.textContent="长度 "+snake.length;statusEl.textContent=state==="playing"?"● 正在觅食":state==="paused"?"● 已暂停":state==="over"?"● 撞到了！":"● 准备出发"}
-  function render(){board.innerHTML="";for(let i=0;i<N*N;i++){const x=i%N,y=Math.floor(i/N),cell=document.createElement("div"),at=snake.findIndex(p=>p.x===x&&p.y===y);cell.className="cell"+(at===0?" snake head":at>0?" snake":"")+(food.x===x&&food.y===y?" food":"");board.appendChild(cell)}
+  function render(){board.innerHTML="";for(let i=0;i<N*N;i++){const x=i%N,y=Math.floor(i/N),cell=document.createElement("div"),at=snake.findIndex(p=>p.x===x&&p.y===y),isFood=food.x===x&&food.y===y;cell.className="cell"+(at===0?" snake head":at>0?" snake":"")+(isFood?" food":"");if(isFood){cell.textContent=FRUIT_ICONS[food.kind];cell.setAttribute("aria-label",food.kind)}board.appendChild(cell)}
     if(state!=="playing"){const cover=document.createElement("div");cover.className="cover";cover.innerHTML=`<div class="dialog"><span>${state==="over"?"本局得分":state==="paused"?"休息一下":"准备好了吗？"}</span>${state==="over"?`<strong>${score}</strong>`:""}<button>${state==="over"?"再来一局":state==="paused"?"继续游戏":"开始游戏"}</button><small>${state==="over"?"按 Enter 也可以重开":"按空格键暂停 / 继续"}</small></div>`;cover.querySelector("button").onclick=state==="over"?reset:start;board.appendChild(cover)}}
   function start(){if(state==="over"){reset();return}state="playing";clearInterval(timer);timer=setInterval(step,speed);update();render()}
   function turn(d){if(OP[dir]!==d)nextDir=d;if(state==="ready")start()}
   function step(){dir=nextDir;const [dx,dy]=V[dir],head={x:snake[0].x+dx,y:snake[0].y+dy},ate=head.x===food.x&&head.y===food.y,body=ate?snake:snake.slice(0,-1);
     if(head.x<0||head.y<0||head.x>=N||head.y>=N||body.some(p=>p.x===head.x&&p.y===head.y)){state="over";clearInterval(timer);update();render();return}
-    snake=[head,...body];if(ate){score+=10;food=foodAt();best=Math.max(best,score);localStorage.setItem("snake-offline-best",best)}update();render()}
+    snake=[head,...body];if(ate){score+=FRUITS[food.kind];food=foodAt();best=Math.max(best,score);localStorage.setItem("snake-offline-best",best)}update();render()}
   document.addEventListener("keydown",e=>{const map={ArrowUp:"UP",w:"UP",W:"UP",ArrowDown:"DOWN",s:"DOWN",S:"DOWN",ArrowLeft:"LEFT",a:"LEFT",A:"LEFT",ArrowRight:"RIGHT",d:"RIGHT",D:"RIGHT"};if(map[e.key]){e.preventDefault();turn(map[e.key])}if(e.code==="Space"){e.preventDefault();if(state==="playing"){state="paused";clearInterval(timer);update();render()}else if(state==="paused")start()}if(e.key==="Enter"&&state==="over")reset()});
   document.querySelectorAll("[data-dir]").forEach(b=>b.onclick=()=>turn(b.dataset.dir));document.querySelector("#reset").onclick=reset;
   document.querySelectorAll("[data-speed]").forEach(b=>b.onclick=()=>{speed=Number(b.dataset.speed);document.querySelectorAll("[data-speed]").forEach(x=>x.classList.toggle("on",x===b));if(state==="playing")start()});

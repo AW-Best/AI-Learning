@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Point = { x: number; y: number };
+type FruitKind = "apple" | "orange" | "berry";
+type Fruit = Point & { kind: FruitKind };
 type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 type Status = "ready" | "playing" | "paused" | "over";
 
@@ -12,18 +14,26 @@ const VECTORS: Record<Direction, Point> = {
   UP: { x: 0, y: -1 }, DOWN: { x: 0, y: 1 }, LEFT: { x: -1, y: 0 }, RIGHT: { x: 1, y: 0 },
 };
 const OPPOSITE: Record<Direction, Direction> = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" };
+const FRUITS: Record<FruitKind, { label: string; icon: string; points: number }> = {
+  apple: { label: "Apple", icon: "🍎", points: 10 },
+  orange: { label: "Orange", icon: "🍊", points: 20 },
+  berry: { label: "Berry", icon: "🫐", points: 30 },
+};
+const FRUIT_KINDS = Object.keys(FRUITS) as FruitKind[];
 
-function makeFood(snake: Point[]): Point {
+function makeFood(snake: Point[]): Fruit {
   const free: Point[] = [];
   for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) {
     if (!snake.some((part) => part.x === x && part.y === y)) free.push({ x, y });
   }
-  return free[Math.floor(Math.random() * free.length)] ?? { x: 4, y: 4 };
+  const point = free[Math.floor(Math.random() * free.length)] ?? { x: 4, y: 4 };
+  const kind = FRUIT_KINDS[Math.floor(Math.random() * FRUIT_KINDS.length)];
+  return { ...point, kind };
 }
 
 export default function Home() {
   const [snake, setSnake] = useState<Point[]>(START);
-  const [food, setFood] = useState<Point>({ x: 14, y: 10 });
+  const [food, setFood] = useState<Fruit>({ x: 14, y: 10, kind: "apple" });
   const [status, setStatus] = useState<Status>("ready");
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
@@ -34,7 +44,7 @@ export default function Home() {
   useEffect(() => { setBest(Number(localStorage.getItem("snake-best") || 0)); }, []);
 
   const reset = useCallback(() => {
-    setSnake(START); setFood({ x: 14, y: 10 }); setScore(0);
+    setSnake(START); setFood({ x: 14, y: 10, kind: "apple" }); setScore(0);
     direction.current = "RIGHT"; queued.current = "RIGHT"; setStatus("ready");
   }, []);
 
@@ -70,7 +80,7 @@ export default function Home() {
         if (ate) {
           setFood(makeFood(next));
           setScore((value) => {
-            const newScore = value + 10;
+            const newScore = value + FRUITS[food.kind].points;
             setBest((oldBest) => { const updated = Math.max(oldBest, newScore); localStorage.setItem("snake-best", String(updated)); return updated; });
             return newScore;
           });
@@ -99,6 +109,9 @@ export default function Home() {
             <div><span>本局得分</span><strong>{String(score).padStart(3, "0")}</strong></div>
             <div><span>最高纪录</span><strong>{String(best).padStart(3, "0")}</strong></div>
           </div>
+          <div className="fruit-legend" aria-label="Fruit point values">
+            {FRUIT_KINDS.map((kind) => <span key={kind}><i className="fruit-icon" aria-hidden="true">{FRUITS[kind].icon}</i>{FRUITS[kind].label} +{FRUITS[kind].points}</span>)}
+          </div>
           <div className="difficulty">
             <span>游戏速度</span>
             <div className="segments" aria-label="选择游戏速度">
@@ -115,7 +128,7 @@ export default function Home() {
                 const x = index % SIZE, y = Math.floor(index / SIZE);
                 const partIndex = snake.findIndex((part) => part.x === x && part.y === y);
                 const isFood = food.x === x && food.y === y;
-                return <div key={index} className={`cell ${partIndex === 0 ? "head" : partIndex > 0 ? "snake" : ""} ${isFood ? "food" : ""}`}>{partIndex === 0 && <><b className="eye one" /><b className="eye two" /></>}</div>;
+                return <div key={index} className={`cell ${partIndex === 0 ? "head" : partIndex > 0 ? "snake" : ""} ${isFood ? "food" : ""}`}>{isFood ? <span aria-label={FRUITS[food.kind].label}>{FRUITS[food.kind].icon}</span> : partIndex === 0 ? <><b className="eye one" /><b className="eye two" /></> : null}</div>;
               })}
               {status !== "playing" && <div className="overlay"><div className="overlay-card"><span>{status === "over" ? "本局得分" : status === "paused" ? "休息一下" : "准备好了吗？"}</span>{status === "over" && <strong>{score}</strong>}<button onClick={() => status === "over" ? reset() : setStatus("playing")}>{status === "over" ? "再来一局" : status === "paused" ? "继续游戏" : "开始游戏"}</button><small>{status === "over" ? "按 Enter 也可以重开" : "按空格键暂停 / 继续"}</small></div></div>}
             </div>
